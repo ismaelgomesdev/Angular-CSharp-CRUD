@@ -1,9 +1,9 @@
+using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using backendApi.Data;
+using backendApi.Data.Interfaces;
 using backendApi.Models;
 
 namespace backendApi.Controllers
@@ -13,41 +13,62 @@ namespace backendApi.Controllers
     [Route("v1/products")]
     public class ProductController : ControllerBase
     {
-        private readonly Product product;
-        [HttpPost]
-        [Route("")]
-        public async Task<ActionResult<Product>> Post([FromServices] DataContext context, [FromBody] Product model)
+        private readonly IProductRepository _product;
+
+        public ProductController(IProductRepository product)
         {
-            if (ModelState.IsValid)
+            _product = product;
+        }
+
+        [HttpPost("")]
+        public IActionResult AddProduct([FromBody] Product product)
+        {
+            _product.AddProduct(product);
+            return Ok();
+        }
+
+        [HttpGet("")]
+        public IActionResult ListProducts()
+        {
+            return Ok(_product.ListProducts());
+        }
+
+        [HttpGet("{id}")]
+        public IActionResult GetProductById(Guid id)
+        {
+            var product = _product.GetProductById(id);
+            if (product == null)
             {
-                context.Products.Add(model);
-                await context.SaveChangesAsync();
-                return model;
+                return NotFound();
             }
-            else
+            return Ok(product);
+        }
+
+        [HttpPut("{id}")]
+        public IActionResult UpdateProduct(Guid id, [FromBody] Product product)
+        {
+            var oldProduct = _product.GetProductById(id);
+            if (oldProduct == null)
             {
-                return BadRequest(ModelState);
+                return NotFound();
             }
+            oldProduct.Name = product.Name;
+            oldProduct.Price = product.Price;
+            _product.UpdateProduct(product);
+            return Ok();
         }
 
-        [HttpGet]
-        [Route("")]
-        public async Task<ActionResult<List<Product>>> Get([FromServices] DataContext context)
+        [HttpDelete("{id}")]
+        public IActionResult Remove(Guid id)
         {
-            var products = await context.Products.ToListAsync();
-            return products;
+            var product = _product.GetProductById(id);
+            if (product == null)
+            {
+                return NotFound();
+            }
+            _product.RemoveProduct(product);
+            return Ok(product);
         }
-
-        [HttpGet]
-        [Route("{id:int}")]
-        public async Task<ActionResult<Product>> GetById([FromServices] DataContext context, int id)
-        {
-            var product = await context.Products.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
-            return product;
-        }
-
-
-        
     }
 
 }

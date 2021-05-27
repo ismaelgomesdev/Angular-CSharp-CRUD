@@ -13,43 +13,21 @@ using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 using Microsoft.EntityFrameworkCore;
 using backendApi.Data;
+using backendApi.Data.Interfaces;
+using backendApi.Data.Repositories;
+
 
 namespace backendApi
 {
     public class Startup
     {
-        public Startup(IConfiguration configuration)
-        {
-            Configuration = configuration;
-        }
-
-        public IConfiguration Configuration { get; }
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddDbContext<DataContext>(
-            opt => 
-                opt.UseInMemoryDatabase("Database")
-                /*opt.UseSqlite(Configuration.GetConnectionString("DefaultConnection"));
-                }*/
-            );
-            services.AddScoped<DataContext, DataContext>();
-            services.AddCors(options =>
-            {
-                options.AddPolicy("CorsPolicy",
-                    builder => builder
-                   .AllowAnyMethod()
-                   .AllowAnyHeader()
-                   .SetIsOriginAllowed((host) => true)
-                   .AllowCredentials());
-            });
-            services.AddControllers();
-            services.AddSwaggerGen(c =>
-            {
-                c.SwaggerDoc("v1", new OpenApiInfo { Title = "backendApi", Version = "v1" });
-            });
+            services.AddControllersWithViews();
 
-            
+            services.AddSingleton<IProductRepository, ProductRepository>();
+
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -58,24 +36,21 @@ namespace backendApi
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
-                app.UseSwagger();
-                app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "backendApi v1"));
             }
 
-            app.UseHttpsRedirection();
+            app.UseCors(config =>
+            {
+                config.AllowAnyHeader();
+                config.AllowAnyMethod();
+                config.AllowAnyOrigin();
+            });
 
             app.UseRouting();
-
-            app.UseCors("CorsPolicy");
-            
-            app.UseStaticFiles();
-
-            app.UseAuthorization();
-
             app.UseEndpoints(endpoints =>
-            {
-                endpoints.MapControllers();
-            });
+                   {
+                       endpoints.MapControllerRoute("default", "{controller=Home}/{action=Index}");
+                   });
+
         }
     }
 }
